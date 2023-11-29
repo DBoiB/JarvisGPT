@@ -3,20 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat with Jarvis</title>
+    <title>JarvisGPT</title>
     <link rel="stylesheet" href="static/styles.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/styles/default.min.css"> <!-- Highlight.js theme -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+    <script src="static/highlight.min.js"></script> <!-- Local Highlight.js library -->
+    <script src="static/languages/javascript.min.js"></script>
+    <link rel="stylesheet" href="static/styles/default.min.css">
+    <link rel="icon" href="static/favicon.ico" type="image/x-icon">
 </head>
 <body>
     <div class="chat-container">
         <h1 class="title">Chat with Jarvis</h1>
-        <div class="chat-box" id="chat-box">
-            <!-- Chat messages will be displayed here -->
+
+        <!-- Adding more div elements similar to your main project -->
+        <div class="additional-container">
+            <div class="chat-box" id="chat-box">
+                <!-- Placeholder for chat messages -->
+            </div>
         </div>
+
         <div class="user-input-container">
-            <input type="text" id="user-input" placeholder="Ask me anything..." />
+            <input type="text" id="user-input" placeholder="Ask me anything...">
             <button id="send-button">Send</button>
+        </div>
+
+        <div class="action-buttons">
+            <button id="regenerate-button">Regenerate</button>
         </div>
     </div>
 

@@ -2,78 +2,100 @@ document.addEventListener('DOMContentLoaded', function () {
     const chatBox = document.getElementById('chat-box');
     const inputField = document.getElementById('user-input');
     const sendButton = document.getElementById('send-button');
+    const regenerateButton = document.getElementById('regenerate-button');
+    let lastUserQuery = '';
+    let lastBotResponseDiv;
+    let isRequestInProgress = false;
 
-    function appendMessage(role, text, isCode = false) {
+    function appendMessage(role, text) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add(role);
         const textDiv = document.createElement('div');
-
-        if (isCode) {
-            const pre = document.createElement('pre');
-            const code = document.createElement('code');
-            code.textContent = text;
-            pre.appendChild(code);
-            textDiv.appendChild(pre);
-        } else {
-            // Use marked.js to convert Markdown to HTML and DOMPurify to sanitize
-            textDiv.innerHTML = DOMPurify.sanitize(marked.parse(text));
-        }
-
+        textDiv.innerHTML = marked.parse(text);
+        textDiv.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
         messageDiv.appendChild(textDiv);
         chatBox.appendChild(messageDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    function showThinkingMessage() {
-        appendMessage('chatbot', 'Thinking...');
-        return chatBox.lastChild;
-    }
-
-    function updateMessage(element, newText, isCode = false) {
-        if (isCode) {
-            const pre = document.createElement('pre');
-            const code = document.createElement('code');
-            code.textContent = newText;
-            pre.appendChild(code);
-            element.firstChild.replaceWith(pre);
-        } else {
-            // Use marked.js and DOMPurify for non-code responses as well
-            element.firstChild.innerHTML = DOMPurify.sanitize(marked.parse(newText));
+    function sendMessageToServer(message, action = '') {
+        if (isRequestInProgress) {
+            return; // Exit if another request is in progress
         }
-    }
 
-    sendButton.addEventListener('click', function () {
-        const userMessage = inputField.value;
-        if (userMessage.trim() === '') return;
+        sendButton.disabled = true; // Disable the send button
+        isRequestInProgress = true;
 
-        appendMessage('user', userMessage);
-        inputField.value = '';
-
-        const thinkingMessageElement = showThinkingMessage();
+        const thinkingMessageDiv = showThinkingMessage();
 
         fetch('/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ message: userMessage }),
+            body: JSON.stringify({ message: message, action: action })
         })
-            .then(response => response.json())
-            .then(data => {
-                // Update this based on your logic to detect if the response is code
-                const isCodeResponse = false;
-                updateMessage(thinkingMessageElement, data.message, isCodeResponse);
-            })
-            .catch(error => {
-                console.error('Error sending message:', error);
-                updateMessage(thinkingMessageElement, 'Error: Could not get a response.');
-            });
-    });
+        .then(response => response.json())
+        .then(data => {
+            updateMessage(thinkingMessageDiv, data.message);
+            if (action === '') {
+                lastUserQuery = message;
+                lastBotResponseDiv = thinkingMessageDiv;
+            }
+        })
+        .catch(error => {
+            console.error('Error sending message:', error);
+            updateMessage(thinkingMessageDiv, 'Error: Could not get a response.');
+        })
+        .finally(() => {
+            sendButton.disabled = false; // Re-enable the send button
+            isRequestInProgress = false;
+        });
+    }
+
+    if (sendButton) {
+        sendButton.addEventListener('click', function () {
+            const userMessage = inputField.value;
+            if (userMessage.trim() === '') return;
+            appendMessage('user', userMessage);
+            inputField.value = '';
+            sendMessageToServer(userMessage);
+        });
+    }
+
+    if (regenerateButton) {
+        regenerateButton.addEventListener('click', function () {
+            if (lastUserQuery) {
+                sendMessageToServer(lastUserQuery, 'regenerate');
+            }
+        });
+    }
 
     inputField.addEventListener('keydown', function (event) {
         if (event.key === 'Enter') {
             event.preventDefault();
-            sendButton.click();
+            if (sendButton && !sendButton.disabled) {
+                sendButton.click();
+            }
         }
+    });
+
+    function showThinkingMessage() {
+        appendMessage('chatbot', 'Thinking...');
+        return chatBox.lastChild;
+    }
+
+    function updateMessage(element, newText) {
+        element.firstChild.innerHTML = marked.parse(newText);
+        element.querySelectorAll('pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
+    }
+
+    // Initialize Highlight.js for static content
+    document.querySelectorAll('pre code').forEach((block) => {
+        hljs.highlightElement(block);
     });
 });
